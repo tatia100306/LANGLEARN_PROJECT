@@ -46,7 +46,7 @@ def ask_deepseek(system_prompt, user_prompt, temperature=0.7):
 
 
 # ======================================
-# DASHBOARD UTAMA (BARU ✨)
+# DASHBOARD UTAMA 
 # ======================================
 @login_required(login_url="login")
 def dashboard_view(request):
@@ -65,7 +65,7 @@ def dashboard_view(request):
 
 
 # ======================================
-# LOGIN (Mengarahkan ke Dashboard Baru)
+# LOGIN
 # ======================================
 def login_view(request):
     if request.method == "POST":
@@ -88,7 +88,7 @@ def login_view(request):
             next_url = request.GET.get("next")
             if next_url:
                 return redirect(next_url)
-            return redirect("dashboard")  # SINKRON: Mengarah ke dashboard utama
+            return redirect("dashboard")
         else:
             messages.error(request, "Username/email atau password salah.")
 
@@ -188,25 +188,43 @@ def grammar_view(request):
 
 
 # ======================================
-# AI CHAT
+# AI CHAT (SUDAH DIPERBAIKI DENGAN RIWAYAT/HISTORY ✨)
 # ======================================
 @login_required(login_url="login")
 def chat_view(request):
-    user_message = ""
-    ai_response = None
+    # Inisialisasi riwayat obrolan di session browser jika belum ada
+    if "chat_history" not in request.session:
+        request.session["chat_history"] = []
 
     if request.method == "POST":
-        user_message = request.POST.get("message")
-        try:
-            ai_response = ask_deepseek(
-                system_prompt="You are a friendly English tutor AI. Reply naturally, practice conversation, correct grammar politely, and keep it short.",
-                user_prompt=user_message,
-                temperature=0.7
-            )
-        except Exception as e:
-            ai_response = f"Error: {str(e)}"
+        user_message = request.POST.get("message", "").strip()
+        
+        if user_message:
+            # Ambil list lama, lalu tambahkan pesan baru dari user
+            history = request.session["chat_history"]
+            history.append({"sender": "user", "text": user_message})
+            
+            try:
+                # Dapatkan respon dari API DeepSeek
+                ai_response = ask_deepseek(
+                    system_prompt="You are a friendly English tutor AI. Reply naturally, practice conversation, correct grammar politely, and keep it short.",
+                    user_prompt=user_message,
+                    temperature=0.7
+                )
+            except Exception as e:
+                ai_response = f"Error: {str(e)}"
+            
+            # Tambahkan balasan dari AI ke riwayat obrolan
+            history.append({"sender": "ai", "text": ai_response})
+            
+            # Beritahu Django bahwa data session telah diubah agar disimpan ke database
+            request.session.modified = True
 
-    return render(request, "chat.html", {"user_message": user_message, "ai_response": ai_response})
+    # Kirim seluruh history obrolan aktif ke template chat.html
+    context = {
+        "chat_history": request.session["chat_history"]
+    }
+    return render(request, "chat.html", context)
 
 
 # ======================================
