@@ -13,15 +13,11 @@
   "routes": [
     {
       "src": "/static/(.*)",
-      "dest": "/staticfiles/$1"
-    },
-    {
-      "src": "/favicon.png",
-      "dest": "/static/favicon.svg"
+      "dest": "/static/$1"
     },
     {
       "src": "/favicon.ico",
-      "dest": "/static/favicon.svg"
+      "dest": "/staticfiles/favicon.svg"
     },
     {
       "src": "/(.*)",
