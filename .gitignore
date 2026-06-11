@@ -13,6 +13,3 @@ __pycache__/
 
 # Database lokal
 db.sqlite3
-
-# Static files hasil collectstatic (Vercel generate sendiri)
-staticfiles/
