@@ -16,14 +16,6 @@
       "dest": "staticfiles/$1"
     },
     {
-      "src": "/favicon.png",
-      "dest": "staticfiles/favicon.svg"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "staticfiles/favicon.svg"
-    },
-    {
       "src": "/(.*)",
       "dest": "langlearn_config/wsgi.py"
     }
