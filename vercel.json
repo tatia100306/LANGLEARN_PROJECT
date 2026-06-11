@@ -1,14 +1,23 @@
 {
   "version": 2,
-  "functions": {
-    "langlearn_config/wsgi.py": {
-      "runtime": "python3.12"
+  "builds": [
+    {
+      "src": "langlearn_config/wsgi.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.12"
+      }
     }
-  },
+  ],
   "routes": [
     {
       "src": "/static/(.*)",
       "dest": "/static/$1"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/static/favicon.svg"
     },
     {
       "src": "/(.*)",
