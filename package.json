@@ -1,0 +1,8 @@
+{
+  "name": "langlearn-project",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "vercel-build": "python manage_vercel.py"
+  }
+}
