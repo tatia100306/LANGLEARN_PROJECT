@@ -1,0 +1,18 @@
+# Jangan pernah push file ini ke GitHub!
+.env
+
+# Virtual environment
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Database lokal
+db.sqlite3
+
+# Static files hasil collectstatic (Vercel generate sendiri)
+staticfiles/

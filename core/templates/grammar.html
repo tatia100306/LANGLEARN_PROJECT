@@ -25,40 +25,52 @@
         <h3 style="color: #0d6efd; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-circle-check"></i> Hasil Analisis
         </h3>
+
+        {# Original #}
         <div style="margin-bottom: 1rem;">
             <small style="color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Original</small>
             <p style="margin-top: 4px; font-size: 1.1rem;">{{ result.original }}</p>
         </div>
-    <div style="margin-bottom: 1.5rem;">
-    <small style="color: #198754; font-weight: 600; text-transform: uppercase;">
-        Koreksi
-    </small>
 
-    <div style="
-        margin-top: 10px;
-        padding: 16px;
-        background: #ffffff;
-        border-radius: 12px;
-        border-left: 5px solid #198754;
-        line-height: 1.8;
-    ">
 
-        <p style="margin-bottom: 12px;">
-            <strong style="color: #198754;">Corrected:</strong><br>
-            <span style="font-size: 1.05rem; color: #111827;">
-                {{ result.corrected }}
-            </span>
-        </p>
 
-        <p style="margin: 0;">
-            <strong style="color: #0d6efd;">Explanation:</strong><br>
-            <span style="color: #475569;">
-                {{ result.explanation }}
-            </span>
-        </p>
+            <div style="margin-top: 10px; padding: 16px; background: #ffffff; border-radius: 12px; border-left: 5px solid #198754; line-height: 1.8;">
 
-    </div>
-</div>
+                {# Corrected text #}
+                <p style="margin-bottom: 12px;">
+                    <strong style="color: #198754;">Corrected:</strong><br>
+                    <span style="font-size: 1.05rem; color: #111827;">{{ result.corrected }}</span>
+                </p>
+
+                {# Errors detail #}
+                {% if result.errors %}
+                <div style="margin-bottom: 12px;">
+                    <strong style="color: #0d6efd;">Errors Found:</strong>
+                    {% for error in result.errors %}
+                    <div style="margin-top: 10px; padding: 10px; background: #fff8e1; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                        <span style="color: #b45309;">❌ "{{ error.original }}"</span>
+                        → <span style="color: #15803d;">✅ "{{ error.correction }}"</span><br>
+                        <small style="color: #475569;">{{ error.explanation }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="margin-bottom: 12px; padding: 10px; background: #f0fdf4; border-radius: 8px;">
+                    <span style="color: #15803d;">✅ Tidak ditemukan kesalahan grammar!</span>
+                </div>
+                {% endif %}
+
+                {# Feedback #}
+                {% if result.feedback %}
+                <div style="padding: 10px; background: #f0fdf4; border-radius: 8px;">
+                    <strong style="color: #15803d;">📝 Feedback:</strong><br>
+                    <span style="color: #475569;">{{ result.feedback }}</span>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+
     </div>
     {% endif %}
 </div>

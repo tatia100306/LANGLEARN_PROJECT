@@ -2,29 +2,31 @@ import os
 import requests
 from dotenv import load_dotenv
 
-# Memuat isi file .env
 load_dotenv()
 
 def tanya_ai(pertanyaan):
-    api_key = os.getenv("DEEPSEEK_API_KEY")
-    url = "https://api.deepseek.com/chat/completions"
-    
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+
     payload = {
-        "model": "deepseek-chat",
-        "messages": [
-            {"role": "user", "content": pertanyaan}
-        ],
-        "stream": False
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": pertanyaan
+                    }
+                ]
+            }
+        ]
     }
-    
+
     try:
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, json=payload)
+
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+
     except Exception as e:
         return f"Error: {str(e)}"

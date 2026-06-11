@@ -11,9 +11,38 @@
     box-sizing: border-box;
 ">
 
-    <div class="header-text" style="flex-shrink: 0; margin-bottom: 15px;">
-        <h1 style="margin: 0 0 5px 0; font-size: 1.8rem;">AI Conversation</h1>
-        <p style="margin: 0; color: #64748b;">Tingkatkan kelancaran berbicara Anda dengan berdialog bersama tutor AI.</p>
+    <div class="header-text" style="flex-shrink: 0; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <h1 style="margin: 0 0 5px 0; font-size: 1.8rem;">AI Conversation</h1>
+            <p style="margin: 0; color: #64748b;">Tingkatkan kelancaran berbicara Anda dengan berdialog bersama tutor AI.</p>
+        </div>
+        
+        <form method="POST" action="{% url 'clear_chat' %}" style="display: inline; margin-top: 5px;">
+            {% csrf_token %}
+            <button
+                type="submit"
+                style="
+                    padding: 0.5rem 1rem;
+                    background: #ef4444;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                    cursor: pointer;
+                    transition: 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    white-space: nowrap;
+                "
+                onmouseover="this.style.background='#dc2626'; this.style.transform='scale(1.05)';"
+                onmouseout="this.style.background='#ef4444'; this.style.transform='scale(1)';"
+                onclick="return confirm('Apakah Anda yakin ingin menghapus semua chat history?');"
+            >
+                <i class="fas fa-trash-alt"></i> Clear Chat
+            </button>
+        </form>
     </div>
 
     <div class="card" style="

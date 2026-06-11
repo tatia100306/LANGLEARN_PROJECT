@@ -5,24 +5,29 @@ from dotenv import load_dotenv
 # Ambil data dari file .env
 load_dotenv()
 
-def panggil_ai_deepseek(teks_user):
-    api_key = os.getenv("DEEPSEEK_API_KEY")
-    url = "https://api.deepseek.com/chat/completions"
-    
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    
+def panggil_ai_gemini(teks_user):
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+
     payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": teks_user}],
-        "stream": False
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": teks_user
+                    }
+                ]
+            }
+        ]
     }
 
     try:
-        response = requests.post(url, headers=headers, json=payload)
-        # Mengambil jawaban teks dari AI
-        return response.json()["choices"][0]["message"]["content"]
+        response = requests.post(url, json=payload)
+        data = response.json()
+
+        # Mengambil jawaban teks dari AI Gemini
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+
     except Exception as e:
         return f"Waduh, ada masalah: {str(e)}"

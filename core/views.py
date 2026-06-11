@@ -1,5 +1,5 @@
 import os
-import requests
+import json
 from dotenv import load_dotenv
 
 from django.shortcuts import render, redirect
@@ -8,42 +8,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import QuizProgress
+from .ai_helper import ai_conversation, check_grammar  # ← import dari ai_helper
 
-# ======================================
-# LOAD ENV
-# ======================================
 load_dotenv()
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-
-
-# ======================================
-# HELPER FUNCTION
-# ======================================
-def ask_deepseek(system_prompt, user_prompt, temperature=0.7):
-    if not DEEPSEEK_API_KEY:
-        raise Exception("DEEPSEEK_API_KEY tidak ditemukan di file .env")
-
-    headers = {
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": temperature,
-        "stream": False
-    }
-
-    response = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=30)
-    response.raise_for_status()
-    data = response.json()
-    return data["choices"][0]["message"]["content"]
-
 
 # ======================================
 # DASHBOARD UTAMA 
@@ -52,7 +19,6 @@ def ask_deepseek(system_prompt, user_prompt, temperature=0.7):
 def dashboard_view(request):
     progress, created = QuizProgress.objects.get_or_create(user=request.user)
     
-    # Hitung akurasi total kuis untuk dipajang di widget ringkasan
     accuracy = 0
     if progress.total_quiz > 0:
         accuracy = int((progress.correct_answers / progress.total_quiz) * 100)
@@ -138,7 +104,7 @@ def register_view(request):
             topic_stats={}
         )
 
-        messages.success(request, "Registrasi berhasil! Silakan login menggunakan akun baru Anda. 🎉")
+        messages.success(request, "Registrasi berhasil! Silakan login. 🎉")
         return redirect("login")
 
     return render(request, "register.html")
@@ -163,67 +129,68 @@ def grammar_view(request):
     user_text = ""
 
     if request.method == "POST":
-        user_text = request.POST.get("text")
-        prompt = f'Please correct the grammar of this text:\n\n"{user_text}"\n\nReturn format:\nOriginal: ...\nCorrected: ...\nExplanation: ...'
+        user_text = request.POST.get("text", "").strip()
 
-        try:
-            raw_response = ask_deepseek(
-                system_prompt="You are a professional English grammar assistant. Give concise and accurate corrections.",
-                user_prompt=prompt,
-                temperature=0.3
-            )
-            result = {
-                "original": user_text,
-                "corrected": raw_response,
-                "explanation": "Grammar successfully analyzed."
-            }
-        except Exception as e:
-            result = {
-                "original": user_text,
-                "corrected": "Error connection",
-                "explanation": str(e)
-            }
+        if user_text:
+            response = check_grammar(user_text)  # ← pakai ai_helper
 
-    return render(request, "grammar.html", {"result": result, "user_text": user_text})
+            if response["success"]:
+                data = response["data"]
+                result = {
+                    "original": user_text,
+                    "corrected": data.get("corrected", user_text),
+                    "errors": data.get("errors", []),
+                    "score": data.get("score", 100),
+                    "feedback": data.get("feedback", ""),
+                }
+            else:
+                result = {
+                    "original": user_text,
+                    "corrected": "Gagal menganalisis.",
+                    "errors": [],
+                    "score": 0,
+                    "feedback": response["message"],
+                }
+
+    return render(request, "grammar.html", {
+        "result": result,
+        "user_text": user_text
+    })
 
 
 # ======================================
-# AI CHAT (SUDAH DIPERBAIKI DENGAN RIWAYAT/HISTORY ✨)
+# AI CHAT
 # ======================================
 @login_required(login_url="login")
 def chat_view(request):
-    # Inisialisasi riwayat obrolan di session browser jika belum ada
     if "chat_history" not in request.session:
         request.session["chat_history"] = []
 
     if request.method == "POST":
         user_message = request.POST.get("message", "").strip()
-        
+
         if user_message:
-            # Ambil list lama, lalu tambahkan pesan baru dari user
             history = request.session["chat_history"]
-            history.append({"sender": "user", "text": user_message})
-            
-            try:
-                # Dapatkan respon dari API DeepSeek
-                ai_response = ask_deepseek(
-                    system_prompt="You are a friendly English tutor AI. Reply naturally, practice conversation, correct grammar politely, and keep it short.",
-                    user_prompt=user_message,
-                    temperature=0.7
-                )
-            except Exception as e:
-                ai_response = f"Error: {str(e)}"
-            
-            # Tambahkan balasan dari AI ke riwayat obrolan
-            history.append({"sender": "ai", "text": ai_response})
-            
-            # Beritahu Django bahwa data session telah diubah agar disimpan ke database
+            history.append({
+                "sender": "user",
+                "text": user_message
+            })
+
+            response = ai_conversation(user_message)  # ← pakai ai_helper
+
+            ai_response = response["message"]  # sukses atau gagal, selalu ada "message"
+
+            history.append({
+                "sender": "ai",
+                "text": ai_response
+            })
+
             request.session.modified = True
 
-    # Kirim seluruh history obrolan aktif ke template chat.html
     context = {
         "chat_history": request.session["chat_history"]
     }
+
     return render(request, "chat.html", context)
 
 
@@ -388,3 +355,42 @@ def progress_view(request):
     }
 
     return render(request, "progress.html", context)
+
+
+# ======================================
+# RESET PROGRESS
+# ======================================
+@login_required(login_url="login")
+def reset_progress_view(request):
+    if request.method == "POST":
+        progress = QuizProgress.objects.get(user=request.user)
+        progress.score = 0
+        progress.total_quiz = 0
+        progress.correct_answers = 0
+        progress.topic_stats = {}
+        progress.save()
+        
+        # Clear all quiz session keys
+        keys_to_delete = [key for key in request.session.keys() if key.startswith('answered_q_')]
+        for key in keys_to_delete:
+            del request.session[key]
+        request.session.modified = True
+        
+        messages.success(request, "Progress berhasil direset! 🎉")
+        return redirect("progress")
+    
+    return redirect("progress")
+
+
+# ======================================
+# CLEAR CHAT
+# ======================================
+@login_required(login_url="login")
+def clear_chat_view(request):
+    if request.method == "POST":
+        request.session["chat_history"] = []
+        request.session.modified = True
+        messages.success(request, "Chat history berhasil dihapus! 🗑️")
+        return redirect("chat")
+    
+    return redirect("chat")
